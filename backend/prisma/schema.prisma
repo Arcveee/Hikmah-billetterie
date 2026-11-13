@@ -1,0 +1,167 @@
+// This is your Prisma schema file.
+// Learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Zone {
+  id           String         @id @default(cuid())
+  name         String         @unique
+  displayOrder Int
+  isActive     Boolean        @default(true)
+  buses        Bus[]
+  pickupPoints PickupPoint[]
+  reservations Reservation[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+}
+
+model Bus {
+  id             String        @id @default(cuid())
+  zoneId         String
+  zone           Zone          @relation(fields: [zoneId], references: [id])
+  number         Int
+  label          String
+  capacity       Int
+  isOpen         Boolean       @default(true)
+  departureTime  String
+  arrivalTime    String
+  returnTime     String?
+  returnLocation String?
+  reservations   Reservation[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([zoneId, number])
+}
+
+model PickupPoint {
+  id           String        @id @default(cuid())
+  zoneId       String
+  zone         Zone          @relation(fields: [zoneId], references: [id])
+  name         String
+  isActive     Boolean       @default(true)
+  reservations Reservation[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model Reservation {
+  id              String        @id @default(cuid())
+  reference       String        @unique
+  publicToken     String        @unique
+  firstName       String
+  lastName        String
+  phone           String
+  neighborhood    String?
+  zoneId          String
+  zone            Zone          @relation(fields: [zoneId], references: [id])
+  pickupPointId   String
+  pickupPoint     PickupPoint   @relation(fields: [pickupPointId], references: [id])
+  seats           Int
+  tripType        TripType
+  busId           String
+  bus             Bus           @relation(fields: [busId], references: [id])
+  amountXof       Int
+  paymentMethod   PaymentMethod
+  status          ReservationStatus @default(PENDING)
+  expiresAt       DateTime
+  paidAt          DateTime?
+  checkedInAt     DateTime?
+  refundRequired  Boolean       @default(false)
+  payments        Payment[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([phone])
+  @@index([status, expiresAt])
+  @@index([busId, status])
+  @@index([zoneId])
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  reservationId String
+  reservation   Reservation   @relation(fields: [reservationId], references: [id])
+  provider      String
+  providerRef   String
+  status        PaymentStatus @default(INITIATED)
+  amountXof     Int
+  rawPayload    Json
+  createdAt     DateTime      @default(now())
+
+  @@unique([provider, providerRef])
+}
+
+model WebhookEvent {
+  id         String   @id @default(cuid())
+  provider   String
+  eventId    String
+  receivedAt DateTime @default(now())
+
+  @@unique([provider, eventId])
+}
+
+model Settings {
+  id                Int      @id @default(autoincrement())
+  singleton         Boolean  @unique @default(true)
+  eventName         String
+  eventDate         DateTime
+  venue             String
+  priceRoundTripXof Int
+  priceOneWayXof    Int
+  lockMinutes       Int      @default(15)
+  maxSeatsPerOrder  Int      @default(6)
+  whatsappContact   String
+  updatedAt         DateTime @updatedAt
+}
+
+model AdminUser {
+  id           String     @id @default(cuid())
+  username     String     @unique
+  passwordHash String
+  auditLogs    AuditLog[]
+  createdAt    DateTime   @default(now())
+}
+
+model AuditLog {
+  id         String    @id @default(cuid())
+  adminId    String
+  admin      AdminUser @relation(fields: [adminId], references: [id])
+  action     String
+  targetType String
+  targetId   String
+  details    Json
+  createdAt  DateTime  @default(now())
+}
+
+enum TripType {
+  ROUND_TRIP
+  ONE_WAY
+}
+
+enum PaymentMethod {
+  WAVE
+  ORANGE_MONEY
+  CASH
+}
+
+enum ReservationStatus {
+  PENDING
+  PAID
+  EXPIRED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  INITIATED
+  SUCCEEDED
+  FAILED
+}

@@ -1,0 +1,31 @@
+# Dépendances
+node_modules/
+
+# Build
+dist/
+build/
+frontend/dist/
+
+# Environnement — NE JAMAIS COMMITER
+.env
+backend/.env
+frontend/.env
+frontend/.env.local
+
+# Logs
+*.log
+logs/
+
+# TypeScript
+*.tsbuildinfo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Prisma — les migrations sont commitées, pas le dossier dev
+backend/prisma/.env
